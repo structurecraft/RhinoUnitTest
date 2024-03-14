@@ -56,7 +56,7 @@ namespace NUnitTestRunner.UI
 				else
 				{
 					foreach (var item in TestItems)
-						if (item.Text.Contains(searchBox.Text))
+						if (item.Text.ToLower().Contains(searchBox.Text.ToLower()))
 							TestListBox.Items.Add(item);
 				}
 			};
