@@ -55,11 +55,11 @@ namespace NUnitTestRunner
 				double testTime = ms; // result.Duration * 1000;
 				if (testTime < 1)
 				{
-					message += "<1ms.";
+					message += "<1 ms.";
 				}
 				else if (testTime < 1000)
 				{
-					message += "<1s.";
+					message += $"{testTime} ms.";
 				}
 				else
 				{
@@ -102,8 +102,7 @@ namespace NUnitTestRunner
 
 			if (test.IsSuite && test.HasChildren)
 			{
-				TestSuite suite = (TestSuite)test;
-				if (suite.Fixture is object) return;
+				if (test is not TestSuite suite) return;
 
 				if (suite.FullName.ToLower().EndsWith(".dll") ||
 					suite.FullName.ToLower().EndsWith(".rhp") ||
