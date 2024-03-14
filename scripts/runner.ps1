@@ -25,7 +25,7 @@ foreach($dllPath in $dllPaths)
 
     $filename = [System.IO.Path]::GetFileNameWithoutExtension($dllPath);
     $filenamePlusExtens = [System.IO.Path]::GetFileName($dllPath);
-    
+
     $dlldir = [System.IO.Path]::GetDirectoryName($dllPath);
     $outputPath = [System.IO.Path]::Combine($dlldir, "$fileName`_integrated_out.xml");
 
@@ -48,7 +48,7 @@ foreach($dllPath in $dllPaths)
     {
         Start-Sleep -Seconds 1
         $timeoutCount += 1
-    
+
         if ($timeoutCount % 10 -eq 0)
         {
             Write-Host "Timeout is $timeoutCount/$timeout"
@@ -65,7 +65,7 @@ foreach($dllPath in $dllPaths)
             Write-Host "Rhino was closed somehow"
             break;
         }
-    
+
         if (Test-Path $outputPath)
         {
             $lastWrite = [datetime]((Get-ChildItem $outputPath).LastWriteTime)
@@ -91,7 +91,7 @@ foreach($dllPath in $dllPaths)
 
         $log_dir = "$env:APPDATA\nunittestrunner"
         $log = Get-ChildItem "$log_dir\*.log" | Where-Object LastWriteTime -gt $now
-        
+
         if ($null -ne $log)
         {
             $log_data = Get-Content $log
@@ -103,9 +103,9 @@ foreach($dllPath in $dllPaths)
     }
     else
     {
-        Write-Host "Test suite ended unexpectidly. No output file created."   
+        Write-Host "Test suite ended unexpectedly. No output file created."
     }
 }
-    
+
 Write-Host "Finished All Test Suites!"
 return $outputFiles

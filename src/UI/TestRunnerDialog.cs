@@ -24,7 +24,10 @@ namespace NUnitTestRunner.UI
 			}
 		}
 
-		ListBox _testListBox;
+		ListBox TestListBox { get; set; }
+		List<IListItem> TestItems { get; set; }
+
+		/// <summary>Creates a new TestRunnerDialog</summary>
 		public TestRunnerDialog(Assembly testAssembly, NUnitTestRunnerArgs args)
 		{
 			Padding = new Padding(5);
@@ -33,19 +36,53 @@ namespace NUnitTestRunner.UI
 			WindowStyle = WindowStyle.Default;
 			MinimumSize = new Size(400, 400);
 
-			var RunAll_button = new Button { Text = "RunAll" };
-			RunAll_button.Click += (sender, e) => Run_button_Click(args, new NUnitRunArgs(_testListBox.Items.ToList(), NUnitRunArgs.TraceLevels.Off));
+			TestItems = new List<IListItem>();
+			TestListBox = new ListBox();
 
-			var Run_button = new Button { Text = "Run" };
-			Run_button.Click +=
-				(sender, e) => Run_button_Click(args, new NUnitRunArgs(new List<IListItem>() { _testListBox.Items[Math.Max(0, _testListBox.SelectedIndex)] }, NUnitRunArgs.TraceLevels.Off));
+			// Filter tests in the test list box by their name.
+			// TODO: consider doing something a bit smarter to preserve the parents
+			// when any of their children are matched by the filter.
+			TextBox searchBox = new TextBox() {
+				PlaceholderText = "Search..."
+			};
+			searchBox.TextChanged += (_, _) =>
+			{
+				TestListBox.Items.Clear();
+				if (string.IsNullOrEmpty(searchBox.Text))
+				{
+					foreach (var item in TestItems)
+						TestListBox.Items.Add(item);
+				}
+				else
+				{
+					foreach (var item in TestItems)
+						if (item.Text.ToLower().Contains(searchBox.Text.ToLower()))
+							TestListBox.Items.Add(item);
+				}
+			};
 
-			var Debug_button = new Button { Text = "Debug" };
-			Debug_button.Click +=
-				(sender, e) => Run_button_Click(args, new NUnitRunArgs(new List<IListItem>() { _testListBox.Items[Math.Max(0, _testListBox.SelectedIndex)] }, NUnitRunArgs.TraceLevels.Verbose));
+			var runAllButton = new Button { Text = "RunAll" };
+			runAllButton.Click += (_, _) =>
+				ExecuteTests(args, new NUnitRunArgs(TestListBox.Items.ToList(), NUnitRunArgs.TraceLevels.Off));
 
-			DefaultButton = new Button { Text = "Close" };
-			DefaultButton.Click += (sender, e) => Close(DialogResult.Ok);
+			var runButton = new Button { Text = "Run" };
+			runButton.Click += (_, _) =>
+			{
+				var singleTest = new List<IListItem>() { TestListBox.Items[Math.Max(0, TestListBox.SelectedIndex)] };
+				ExecuteTests(args, new NUnitRunArgs(singleTest, NUnitRunArgs.TraceLevels.Off));
+			};
+
+			var debugButton = new Button { Text = "Debug" };
+			debugButton.Click += (_, _) =>
+			{
+				var singleTest = new List<IListItem>() { TestListBox.Items[Math.Max(0, TestListBox.SelectedIndex)] };
+				ExecuteTests(args, new NUnitRunArgs(singleTest, NUnitRunArgs.TraceLevels.Verbose));
+			};
+
+			var closeButton = new Button { Text = "Close" };
+			closeButton.Click += (sender, e) => Close(DialogResult.Ok);
+
+			DefaultButton = closeButton;
 
 			var tests = testAssembly.GetExportedTypes()
 				.Select(type => type.GetMethods().Where(typ =>
@@ -54,11 +91,8 @@ namespace NUnitTestRunner.UI
 							Attribute.IsDefined(typ, typeof(NUnit.Framework.IgnoreAttribute))
 					));
 
-			_testListBox = new ListBox();
-
 			var items = tests;
-			_testListBox.Height = 75;
-			if (items != null)
+			if (items is not null)
 			{
 				foreach (var item in items)
 				{
@@ -69,7 +103,7 @@ namespace NUnitTestRunner.UI
 					var value = item.First().DeclaringType;
 					var clsAttr = value.Attributes;
 					string typeName = $"{value.Name} ({item.Count()})";
-					_testListBox.Items.Add(new ListItem() { Text = typeName, Key = value.FullName, Tag = methods });
+					TestItems.Add(new ListItem() { Text = typeName, Key = value.FullName, Tag = methods });
 					foreach (var method in methods)
 					{
 						string text = string.Empty;
@@ -83,38 +117,44 @@ namespace NUnitTestRunner.UI
 						}
 
 						var testItem = new ListItem() { Text = text, Key = method.Name, Tag = method };
-						_testListBox.Items.Add(testItem);
+						TestItems.Add(testItem);
 					}
 				}
-
 			}
 
-			var defaults_layout = new TableLayout
+			TestListBox.Height = 75;
+			foreach (var item in TestItems)
+				TestListBox.Items.Add(item);
+
+
+			var defaultLayout = new TableLayout
 			{
 				Padding = new Padding(5, 10, 5, 5),
 				Spacing = new Size(5, 5),
-				Rows = { new TableRow(RunAll_button, Run_button, Debug_button, DefaultButton) }
+				Rows = { new TableRow(runAllButton, runButton, debugButton, closeButton) }
 			};
 
 			Content = new TableLayout
 			{
 				Padding = new Padding(5),
 				Spacing = new Size(5, 5),
-				Rows =
-						{
-						  new TableRow(defaults_layout),
-						  _testListBox
-						}
+				Rows = {
+					searchBox,
+					new TableRow(defaultLayout),
+					TestListBox
+				}
 			};
 
 		}
 
-		private void Run_button_Click(NUnitTestRunnerArgs args, NUnitRunArgs e)
+		private void ExecuteTests(NUnitTestRunnerArgs args, NUnitRunArgs e)
 		{
 			Visible = false;
 
 			try
 			{
+				// TODO: This line is what makes the RunAll button do decidedly nothing.
+				// We should either remove the button or loop over the list of items.
 				if (e.TestItems.Count == 1)
 				{
 					string className = null;
