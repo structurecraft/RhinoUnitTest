@@ -87,7 +87,7 @@ namespace NUnitTestRunner
 					}
 				}
 
-				PreviousTestResults.Add(result.FullName, result.ResultState.Status);
+				PreviousTestResults.Add(resultName, result.ResultState.Status);
 			}
 		}
 
